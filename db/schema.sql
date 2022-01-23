@@ -8,8 +8,7 @@ DROP TABLE IF EXISTS departments;
 
 CREATE TABLE departments (
     id INTEGER AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(30) NOT NULL,
-    CONSTRAINT c_name UNIQUE (name)
+    name VARCHAR(30) NOT NULL UNIQUE
 );
 
 CREATE TABLE roles (
@@ -17,8 +16,7 @@ CREATE TABLE roles (
     job_title VARCHAR(30) NOT NULL,
     salary INTEGER NOT NULL,
     department_id INTEGER,
-    CONSTRAINT fk_department FOREIGN KEY (department_id) REFERENCES departments(id),
-    CONSTRAINT c_job UNIQUE (job_title)
+    CONSTRAINT fk_department FOREIGN KEY (department_id) REFERENCES departments(id)
 );
 
 CREATE TABLE employees (
