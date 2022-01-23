@@ -1,5 +1,5 @@
 const inquirer = require('inquirer');
-const cTable = require('console.table');
+const Ctable = require('console.table');
 const db = require ('./db/connection');
 
 
@@ -15,7 +15,10 @@ const promptOne = function(){
                 defalut: 'View All Employees'                
             }
         ])
-        .then(promptTwo);
+        .then(promptTwo)
+        .catch((error) => {
+            console.log(error);
+        });
 }
 
 // Get department query
@@ -88,13 +91,13 @@ const getEmployees = () => {
     })
 }
 
-//Add Role
-const addRole = () => {
+
+// Get Department Id for adding role and employee
+let getDepId = (purpose) => {
     let depObjs = []
     getDepartments
         .then((rows) => {
             depObjs = [...rows];
-            console.log(depObjs);
             const depArray = ['None'];
             rows.forEach(department => {
                 depArray.push(department.name);
@@ -111,50 +114,75 @@ const addRole = () => {
                 },
             ]).then(({department}) => {
                 if (department === 'None') {
-                    addDepartment();
+                    return addDepartment();
                 } else {
-                    return department
-                }
-            }).then((department) => {
-                return inquirer
-                    .prompt([
-                        {
-                            type: 'text',
-                            name:'job',
-                            message: 'What is the job title?',
-                            validate: input => {
-                                if (input) {
-                                    return true;
-                                }
-                                else {
-                                    console.log('Please enter a job title');
-                                }
-                            }
-                        },
-                        {
-                            type:'number',
-                            name: 'salary',
-                            message: 'What is the salary for this job?',
-                            validate: input => {
-                                if (input) {
-                                    return true;
-                                }
-                                else {
-                                    console.log('Please enter a salary');
-                                }
-                            }
+                    depObjs.forEach(obj => {
+                        if(obj.name === department){
+                            depId = obj.id;
                         }
-                    ]). then((results) => {
-                        depObjs.forEach(obj => {
-                            if(obj.name === department){
-                                return obj.id;
-                            }
-                        })
-                        
-                    })
-            })
-        })
+                    });
+                    if (purpose === 'Role') {
+                        return addRole(depId)
+                    } else if (purpose === 'Employee') {
+                        return addEmployee(depId);
+                    }
+                }
+            });
+        });
+};
+//Add Role
+const addRole = (id) => {
+    console.log(id);
+     inquirer
+    .prompt([
+        {
+            type: 'text',
+            name:'job',
+            message: 'What is the job title?',
+            validate: input => {
+                if (input) {
+                    return true;
+                }
+                else {
+                    console.log('Please enter a job title');
+                }
+            }
+        },
+        {
+            type:'number',
+            name: 'salary',
+            message: 'What is the salary for this job?',
+            validate: input => {
+                if (input) {
+                    return true;
+                }
+                else {
+                    console.log('\nPlease enter a salary');
+                    return false;
+                }
+            }
+        }
+    ]).then((results) => {
+        const sql = `INSERT INTO roles (job_title, salary, department_id) VALUES (?,?,?);`
+        const params = [results.job, results.salary, id];
+        db.query(sql, params, (err, result) => {
+            if (err) {
+                console.log(err.sqlMessage);
+            } else {
+                console.log('Role Added!');
+                promptOne();
+            }
+        });
+    });
+    
 }
+
+
+
+//Add Employee
+
+//Update Employee Role
+
 
 // Take results from first prompt and output table
 const promptTwo = function (result) {
@@ -183,11 +211,11 @@ const promptTwo = function (result) {
     } else if ( firstPrompt === 'Add Department') {
         addDepartment();
     } else if (firstPrompt === 'Add Role') {
-       addRole();
+       getDepId('Role');
     } else if (firstPrompt === 'Add Employee') {
-        console.log('adding employee')
+        getDepId('Employee');
     } else if (firstPrompt === 'Update Employee Role') {
-        console.log('updating employee')
+        updateEmployee();
     } else if (firstPrompt === 'Quit') {
         console.log('Exiting');
         db.end();
