@@ -2,6 +2,8 @@ const inquirer = require('inquirer');
 const cTable = require('console.table');
 const db = require ('./db/connection');
 
+
+// Prompt what table is to be viewed
 const promptOne = function(){
     return inquirer
         .prompt([
@@ -16,6 +18,8 @@ const promptOne = function(){
         .then(promptTwo);
 }
 
+
+// Take results from first prompt and output table
 const promptTwo = function (result) {
     const {firstPrompt} = result;
     if(firstPrompt === 'View All Departments'){
@@ -28,7 +32,8 @@ const promptTwo = function (result) {
             promptOne();
         })
     } else if (firstPrompt === 'View All Roles') {
-        const sql = `SELECT * FROM roles`
+        const sql = `SELECT r.job_title AS Role, r.salary, d.name AS department FROM roles AS r
+        LEFT JOIN departments AS d ON r.department_id = d.id;`
         db.query(sql, (err, data) => {
             if (err) {
                 throw err;
@@ -37,7 +42,7 @@ const promptTwo = function (result) {
             promptOne();
         })
     } else if (firstPrompt === 'View All Employees') {
-        const sql = `SELECT * FROM departments`
+        const sql = `SELECT CONCAT(e.first_name," ", e.last_name) AS "Full Name", e.manager AS Manager, r.job_title AS Role, r.salary AS Salary, d.name AS Department FROM employees AS e LEFT JOIN roles AS r ON e.role_id = r.id LEFT JOIN departments AS d ON r.department_id = d.id;`
         db.query(sql, (err, data) => {
             if (err) {
                 throw err;
@@ -53,14 +58,12 @@ const promptTwo = function (result) {
         console.log('adding employee')
     } else if (firstPrompt === 'Update Employee Role') {
         console.log('updating employee')
+    } else if (firstPrompt === 'Quit') {
+        console.log('Exiting');
     }
-    promptOne();
-    // inquirer
-    //     .prompt([
-    //         {
 
-    //         }
-    //     ])
 }
+
+
 
 promptOne()
