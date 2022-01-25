@@ -23,7 +23,7 @@ const promptOne = function(){
 
 // Get department query
 let getDepartments = new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM departments;`
+    const sql = `SELECT * FROM departments ORDER BY id ASC;`
     db.query(sql, (err, rows) => {
         if (err) {
             reject(err.sqlMessage);
@@ -67,7 +67,7 @@ const addDepartment = () => {
 
 //Get Roles
 const getRoles = new Promise((resolve, reject) => {
-    const sql = `SELECT r.job_title AS Role, r.salary, d.name AS department FROM roles AS r
+    const sql = `SELECT r.id, r.job_title AS Job, r.salary, d.name AS department FROM roles AS r
     LEFT JOIN departments AS d ON r.department_id = d.id;`
     db.query(sql, (err, rows) => {
         if (err) {
@@ -94,6 +94,7 @@ const getEmployees = () => {
 
 // Get Department Id for adding role and employee
 let getDepId = (purpose) => {
+    console.log(purpose);
     let depObjs = []
     getDepartments
         .then((rows) => {
@@ -121,10 +122,10 @@ let getDepId = (purpose) => {
                             depId = obj.id;
                         }
                     });
-                    if (purpose === 'Role') {
-                        return addRole(depId)
-                    } else if (purpose === 'Employee') {
-                        return addEmployee(depId);
+                    if (purpose === 'Employee') {
+                        return addEmployee(depId)
+                    } else if (purpose === 'Role') {
+                        return addRole(depId);
                     }
                 }
             });
@@ -132,7 +133,6 @@ let getDepId = (purpose) => {
 };
 //Add Role
 const addRole = (id) => {
-    console.log(id);
      inquirer
     .prompt([
         {
@@ -177,9 +177,86 @@ const addRole = (id) => {
     
 }
 
-
-
 //Add Employee
+const addEmployee = (id) => {
+    roleObj = {};
+    getRoles
+        .then((rows) => {
+            roleObj = [...rows];
+            const roleArray = ['None'];
+            rows.forEach(role => {
+                roleArray.push(role.Job);
+            });
+            return roleArray;
+        }).then((roles) => {
+            inquirer
+            .prompt([
+                {
+                    type: 'list',
+                    name:'role',
+                    message:'What role does your job belong to?',
+                    choices: [...roles]
+                },
+                {
+                    type: 'text',
+                    name: 'firstName',
+                    message:"What is the employee's first name?",
+                    validate: input => {
+                        if (input) {
+                            return true;
+                        }
+                        else {
+                            console.log('\nPlease enter a first name');
+                            return false;
+                        }
+                    }
+                },
+                {
+                    type: 'text',
+                    name: 'lastName',
+                    message:"What is the employee's last name?",
+                    validate: input => {
+                        if (input) {
+                            return true;
+                        }
+                        else {
+                            console.log('\nPlease enter a last name');
+                            return false;
+                        }
+                    }
+                },               
+                {
+                    type: 'text',
+                    name: 'manager',
+                    message:"Who is the employee's manager?",
+                    validate: input => {
+                        if (input) {
+                            return true;
+                        }
+                        else {
+                            console.log('\nPlease enter a manager name');
+                            return false;
+                        }
+                    }
+                }
+
+            ]).then((data) => {
+                if (data.role === 'None') {
+                    return addRole(id);
+                } else {
+                    roleObj.forEach(obj => {
+                        if(obj.Job === data.role){
+                            roleId = obj.id;
+                        }
+                    });
+                    console.log(data)
+                    console.log(id)
+                    console.log(roleId)
+
+                }
+            });
+        });
+}           
 
 //Update Employee Role
 
