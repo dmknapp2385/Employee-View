@@ -94,7 +94,6 @@ const getEmployees = () => {
 
 // Get Department Id for adding role and employee
 let getDepId = (purpose) => {
-    console.log(purpose);
     let depObjs = []
     getDepartments
         .then((rows) => {
@@ -115,7 +114,8 @@ let getDepId = (purpose) => {
                 },
             ]).then(({department}) => {
                 if (department === 'None') {
-                    return addDepartment();
+                    console.log('Please add the department first.');
+                    return promptOne();
                 } else {
                     depObjs.forEach(obj => {
                         if(obj.name === department){
@@ -123,7 +123,7 @@ let getDepId = (purpose) => {
                         }
                     });
                     if (purpose === 'Employee') {
-                        return addEmployee(depId)
+                        return getRolebyId(depId);
                     } else if (purpose === 'Role') {
                         return addRole(depId);
                     }
@@ -177,86 +177,101 @@ const addRole = (id) => {
     
 }
 
+//Get role by department to add employee
+const getRolebyId = (id) => {
+    const sql = `SELECT job_title, id FROM roles WHERE department_id=?;`
+    params = id;
+    db.query(sql, params, (err, rows) => {
+        if (err) {
+            throw err;
+        }
+        addEmployee(rows);
+    })
+}
 //Add Employee
-const addEmployee = (id) => {
-    roleObj = {};
-    getRoles
-        .then((rows) => {
-            roleObj = [...rows];
-            const roleArray = ['None'];
-            rows.forEach(role => {
-                roleArray.push(role.Job);
-            });
-            return roleArray;
-        }).then((roles) => {
-            inquirer
-            .prompt([
-                {
-                    type: 'list',
-                    name:'role',
-                    message:'What role does your job belong to?',
-                    choices: [...roles]
-                }
-            ]).then(({role}) => {
-                if (role === 'None') {
-                    return addRole(id);
-                } else {
-                    inquirer
-                        .prompt([
-                            {
-                                type: 'text',
-                                name: 'firstName',
-                                message:"What is the employee's first name?",
-                                validate: input => {
-                                    if (input) {
-                                        return true;
-                                    }
-                                    else {
-                                        console.log('\nPlease enter a first name');
-                                        return false;
-                                    }
+const addEmployee = (rows) => {
+    console.log(rows);
+    const roleArray = ['None'];
+    rows.forEach(role => {
+        roleArray.push(role.job_title);
+    });
+        inquirer
+        .prompt([
+            {
+                type: 'list',
+                name:'role',
+                message:'What role does your job belong to?',
+                choices: [...roleArray]
+            }
+        ]).then(({role}) => {
+            if (role === 'None') {
+                console.log('Please add this job first.')
+                return promptOne();
+            } else {
+                inquirer
+                    .prompt([
+                        {
+                            type: 'text',
+                            name: 'firstName',
+                            message:"What is the employee's first name?",
+                            validate: input => {
+                                if (input) {
+                                    return true;
                                 }
-                            },
-                            {
-                                type: 'text',
-                                name: 'lastName',
-                                message:"What is the employee's last name?",
-                                validate: input => {
-                                    if (input) {
-                                        return true;
-                                    }
-                                    else {
-                                        console.log('\nPlease enter a last name');
-                                        return false;
-                                    }
-                                }
-                            },               
-                            {
-                                type: 'text',
-                                name: 'manager',
-                                message:"Who is the employee's manager?",
-                                validate: input => {
-                                    if (input) {
-                                        return true;
-                                    }
-                                    else {
-                                        console.log('\nPlease enter a manager name');
-                                        return false;
-                                    }
+                                else {
+                                    console.log('\nPlease enter a first name');
+                                    return false;
                                 }
                             }
-                        ]).then((data) => {
-                            console.log (data);
-                            console.log(role);
-                            roleObj.forEach(obj => {
-                                if(obj.Job === data.role){
-                                roleId = obj.id;
+                        },
+                        {
+                            type: 'text',
+                            name: 'lastName',
+                            message:"What is the employee's last name?",
+                            validate: input => {
+                                if (input) {
+                                    return true;
                                 }
-                            });
+                                else {
+                                    console.log('\nPlease enter a last name');
+                                    return false;
+                                }
+                            }
+                        },               
+                        {
+                            type: 'text',
+                            name: 'manager',
+                            message:"Who is the employee's manager?",
+                            validate: input => {
+                                if (input) {
+                                    return true;
+                                }
+                                else {
+                                    console.log('\nPlease enter a manager name');
+                                    return false;
+                                }
+                            }
+                        }
+                    ]).then((data) => {
+                        rows.forEach(row => {
+                            if(row.job_title === role){
+                            roleId = row.id;
+                            }
                         });
-                }
-            });
+                        const sql = `INSERT INTO employees(first_name, last_name, manager, role_id) VALUES (?,?,?,?);`
+                        const params = [data.firstName, data.lastName, data.manager, roleId];
+                        db.query(sql, params, (err, result) => {
+                            if (err) {
+                                throw err
+                            } else {
+                                console.log('\nEmployee Added')
+                            }
+                            promptOne();
+                        })
+                    });
+            }
         });
+
 }           
 
 //Update Employee Role

@@ -15,7 +15,7 @@ VALUES
     ('Surgeon', 160000, 2),
     ('Receptionist', 30000, 2),
     ('Nurse', 100000, 2),
-    ('Foreman', 80000, 3),
+    ('Intern', 80000, 3),
     ('General Worker', 40000, 3),
     ('Driver', 50000, 3);
 
