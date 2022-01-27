@@ -12,7 +12,7 @@ const promptOne = function(){
                 type: 'list',
                 name: 'firstPrompt',
                 message: 'What would you like to do?',
-                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Quit'],
+                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager', 'Quit'],
                 defalut: 'View All Employees'                
             }
         ])
@@ -27,7 +27,6 @@ const getDepartmentsSQL = `SELECT * FROM departments ORDER BY id ASC;`
 const getRoleSQL = `SELECT r.id, r.job_title AS Job, r.salary, d.name AS department FROM roles AS r
 LEFT JOIN departments AS d ON r.department_id = d.id;`
 const getEmployeesSQL = `SELECT CONCAT(e.first_name," ", e.last_name) AS "Full Name", e.manager AS Manager, r.job_title AS Role, r.salary AS Salary, d.name AS Department FROM employees AS e LEFT JOIN roles AS r ON e.role_id = r.id LEFT JOIN departments AS d ON r.department_id = d.id;`
-
 const getRoleByIDSQL = `SELECT job_title, id FROM roles WHERE department_id=?;`
 
 // get departments
@@ -132,6 +131,8 @@ let getDepId = (purpose) => {
                         return addRole(depId);
                     } else if (purpose === 'UpdateRole') {
                         return updateEmployee(depId);
+                    } else if (purpose === 'UpdateManager') {
+                        return updateEmployeeManager(depId);
                     }
                 }
             });
@@ -195,12 +196,12 @@ const addEmployee = (id) => {
                 {
                     type: 'list',
                     name:'role',
-                    message:'What role does your job belong to?',
+                    message:'What role does your employee belong to?',
                     choices: [...roleArray]
                 }
             ]).then(({role}) => {
                 if (role === 'None') {
-                    console.log('Please add this job first.')
+                    console.log('Please add this role first.')
                     return promptOne();
                 } else {
                     inquirer
@@ -271,7 +272,7 @@ const addEmployee = (id) => {
 const updateEmployee = (id) => {
     db.query(getRoleByIDSQL, id)
         .then((rows) => {
-            let roleObj = [...rows]
+            let roleObj = [...rows];
             const roleArray = [];
             rows.forEach(role => {
                 roleArray.push(role.job_title);
@@ -286,18 +287,20 @@ const updateEmployee = (id) => {
                 }
             ]).then(({role}) => {
                 if (role === 'None') {
-                    console.log('Please make sure you are in the right deparment')
+                    console.log('Please make sure you are in the right deparment or add another role first')
                     return promptOne();
                 } else {
-                    roleObj.forEach(role => {
-                        if(role.job_title === role) {
-                            oldroleId = role.id
+                    console.log(roleObj);
+                    console.log(typeof(role));
+                    roleObj.forEach(row => {
+                        if (row.job_title === role) {
+                            oldroleId = row.id;
                         }
-                    });
-
+                    })
                     const sql = `SELECT last_name, id FROM employees WHERE role_id=?;`
                     db.query(sql, oldroleId)
                         .then((rows) => {
+                            let lastnameobj = [...rows]
                             const lastNamearry = [];
                             rows.forEach(name => {
                                 lastNamearry.push(name.last_name);
@@ -322,17 +325,30 @@ const updateEmployee = (id) => {
                                                     type:'list',
                                                     name:'update',
                                                     message:'What is the new role you would like the employee to have?',
-                                                    choice: [...roleArray]
+                                                    choices: [...roleArray]
                                                 }
                                             ])
                                             .then(({update}) => {
-                                                rows.forEach(row => {
-                                                    if (row.last_name === LastName) {
-                                                        nameId = row.id;
+                                                roleObj.forEach(row => {
+                                                    if (row.job_title === update) {
+                                                        newRoleId = row.id
                                                     }
-                                                    const sql = `UPDATE employees SET role_id = `
                                                 })
-                                        
+                                                lastnameobj.forEach(row => {
+                                                    if(row.last_name === LastName) {
+                                                        empId = row.id
+                                                    }
+                                                })
+                                                const sql = `UPDATE employees SET role_id=? WHERE id=?;`
+                                                const params = [newRoleId, empId];
+                                                db.query(sql, params)
+                                                    .then((results)=> {
+                                                        console.log(`Employee updated to ${update}. \nWhat else would you like to do?`);
+                                                        return promptOne();
+                                                    })
+                                                    .catch(err => {
+                                                        console.log(err.message)
+                                                    })
                                             });
                                     }
                                 });
@@ -341,6 +357,98 @@ const updateEmployee = (id) => {
                 }
         })
 })
+}
+
+//Update Employee Manager 
+const updateEmployeeManager = (id) => {
+    console.log(id)
+    db.query(getRoleByIDSQL, id)
+    .then((rows) => {
+        let roleObj = [...rows];
+        const roleArray = [];
+        rows.forEach(role => {
+            roleArray.push(role.job_title);
+        });
+        inquirer
+        .prompt([
+            {
+                type: 'list',
+                name:'role',
+                message:'What role does the employee have?',
+                choices: ['None', ...roleArray]
+            }
+        ]).then(({role}) => {
+            if (role === 'None') {
+                console.log('Please make sure you are in the right deparment or add another role first')
+                return promptOne();
+            } else {
+                roleObj.forEach(row => {
+                    if (row.job_title === role) {
+                        oldroleId = row.id;
+                    }
+                })
+                const sql = `SELECT last_name, id FROM employees WHERE role_id=?;`
+                db.query(sql, oldroleId)
+                    .then((rows) => {
+                        let lastnameobj = [...rows]
+                        const lastNamearry = [];
+                        rows.forEach(name => {
+                            lastNamearry.push(name.last_name);
+                        });
+                        inquirer
+                            .prompt([
+                                {
+                                    type: 'list',
+                                    name: 'LastName',
+                                    message:'What is the last name of the employee you would like to update?',
+                                    choices:['None', ...lastNamearry]
+                                }
+                            ])
+                            .then(({LastName}) => {
+                                if (LastName === 'None') {
+                                    console.log('Please make sure you are in the right department and role')
+                                    return promptOne();
+                                } else {
+                                    inquirer
+                                        .prompt([
+                                            {
+                                                type:'text',
+                                                name:'update',
+                                                message:'Who is the new manager you would like the employee to have?',
+                                                validate: input => {
+                                                    if (input) {
+                                                        return true
+                                                    } else {
+                                                        console.log('Please enter a manager')
+                                                    }
+                                                }
+                                            }
+                                        ])
+                                        .then(({update}) => {
+                                            lastnameobj.forEach(row => {
+                                                if(row.last_name === LastName) {
+                                                    empId = row.id
+                                                }
+                                            })
+                                            const sql = `UPDATE employees SET manager=? WHERE id=?;`
+                                            const params = [update, empId];
+                                            db.query(sql, params)
+                                                .then((results)=> {
+                                                    console.log(`Employee manager updated to ${update}. \nWhat else would you like to do?`);
+                                                    return promptOne();
+                                                })
+                                                .catch(err => {
+                                                    console.log(err.message)
+                                                })
+                                        });
+                                }
+                            });
+                    })
+               
+            }
+    })
+})
+
 }
 
 
@@ -361,6 +469,8 @@ const promptTwo = function (result) {
         getDepId('Employee');
     } else if (firstPrompt === 'Update Employee Role') {
         getDepId('UpdateRole');
+    } else if (firstPrompt === 'Update Employee Manager') {
+        getDepId('UpdateManager');
     } else if (firstPrompt === 'Quit') {
         db.close();
     }
