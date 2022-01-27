@@ -12,7 +12,7 @@ const promptOne = function(){
                 type: 'list',
                 name: 'firstPrompt',
                 message: 'What would you like to do?',
-                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager', 'Quit'],
+                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'View Employee by Department','View Employee by Manager','Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager','Quit'],
                 defalut: 'View All Employees'                
             }
         ])
@@ -26,14 +26,15 @@ const promptOne = function(){
 const getDepartmentsSQL = `SELECT * FROM departments ORDER BY id ASC;`
 const getRoleSQL = `SELECT r.id, r.job_title AS Job, r.salary, d.name AS department FROM roles AS r
 LEFT JOIN departments AS d ON r.department_id = d.id;`
-const getEmployeesSQL = `SELECT CONCAT(e.first_name," ", e.last_name) AS "Full Name", e.manager AS Manager, r.job_title AS Role, r.salary AS Salary, d.name AS Department FROM employees AS e LEFT JOIN roles AS r ON e.role_id = r.id LEFT JOIN departments AS d ON r.department_id = d.id;`
+const getEmployeesSQL = `SELECT CONCAT(e.first_name," ", e.last_name) AS "Full Name", e.manager AS Manager, r.job_title AS Role, r.salary AS Salary, d.name AS Department FROM employees AS e LEFT JOIN roles AS r ON e.role_id = r.id LEFT JOIN departments AS d ON r.department_id = d.id`
 const getRoleByIDSQL = `SELECT job_title, id FROM roles WHERE department_id=?;`
 
 // get departments
 const getDepartments = () => {
     db.query(getDepartmentsSQL)
         .then((rows) => {
-            console.table('\n\nDepartments', rows);
+            console.table('\n\nDepartments\n', rows);
+            console.log('What else would you like to do? \n')
             promptOne();
         })
         .catch((err)=>{
@@ -75,6 +76,7 @@ const getRoles = () => {
     db.query(getRoleSQL)
         .then((rows) => {
             console.table('\n\nRoles', rows);
+            console.log('What else would you like to do?\n')
             promptOne();
         })
         .catch((err)=>{
@@ -84,9 +86,10 @@ const getRoles = () => {
 
 // Get Employees 
 const getEmployees = () => {
-    db.query(getEmployeesSQL)
+    db.query(getEmployeesSQL+`;`)
     .then((rows) => {
         console.table('\n\nEmployees', rows);
+        console.log("What else would you like to do?\n")
         promptOne();
     })
     .catch((err)=>{
@@ -133,6 +136,10 @@ let getDepId = (purpose) => {
                         return updateEmployee(depId);
                     } else if (purpose === 'UpdateManager') {
                         return updateEmployeeManager(depId);
+                    } else if (purpose === 'viewByManager') {
+                        return viewByManager(depId);
+                    } else if (purpose === 'viewByDept') {
+                        return viewByDepartment(depId)
                     }
                 }
             });
@@ -451,6 +458,20 @@ const updateEmployeeManager = (id) => {
 
 }
 
+// view employees by manager
+
+const viewByManager = (id) => {
+
+}
+
+const viewByDepartment =(id) => {
+    db.query(getEmployeesSQL +` WHERE d.id =?;`, id)
+    .then(rows => {
+        console.table(rows, '\nWhat else would you like to do?\n');
+        promptOne();
+    })
+}
+
 
 // Take results from first prompt and output table
 const promptTwo = function (result) {
@@ -463,6 +484,10 @@ const promptTwo = function (result) {
         getEmployees();
     } else if ( firstPrompt === 'Add Department') {
         addDepartment();
+    } else if (firstPrompt === 'View Employee By Manager'){
+        getDepId('viewByManager');
+    } else if (firstPrompt === 'View Employee by Department') {
+        getDepId('viewByDept');
     } else if (firstPrompt === 'Add Role') {
         getDepId('Role');
     } else if (firstPrompt === 'Add Employee') {
