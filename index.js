@@ -12,7 +12,7 @@ const promptOne = function(){
                 type: 'list',
                 name: 'firstPrompt',
                 message: 'What would you like to do?',
-                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'View Employee by Department','View Employee by Manager','Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager','View Total Utilized Budget','Quit'],
+                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'View Employee by Department','View Employee by Manager','Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager','View Total Utilized Budget', 'Delete Department', 'Delete Role', 'Delete Employee', 'Quit'],
                 defalut: 'View All Employees'                
             }
         ])
@@ -139,7 +139,13 @@ let getDepId = (purpose) => {
                         return viewByManager(depId);
                     } else if (purpose === 'viewByDept') {
                         return viewByDepartment(depId)
-                    } 
+                    } else if (purpose === 'deleteDep') {
+                        deleteDept(depId);
+                    } else if (purpose === 'deleteRole') {
+                        deleteRole(depId);
+                    } else if (purpose === 'deleteEmp') {
+                        deleteEmp(depId);
+                    }
                 }
             });
         });
@@ -498,7 +504,7 @@ const viewByDepartment =(id) => {
     })
 }
 
-// get tota utilized budget by department
+// get total utilized budget by department
 const getBudget = () => {
     db.query(`SELECT d.name AS Department, SUM (r.salary) AS "Utlized Budget" FROM departments as d LEFT JOIN roles as r on d.id = r.department_id GROUP BY 1 ORDER BY 2 DESC`)
     .then(rows => {
@@ -509,6 +515,122 @@ const getBudget = () => {
     .catch(err => console.log(err));
 }
 
+//Delete departments
+const deleteDept = (id) => {
+    db.query(`DELETE FROM  departments WHERE id = ?`, id)
+    .then(data => {
+        console.log('\nDepartment deleted. What would you like to do next?\n');
+        promptOne();
+    })
+
+}
+// Delete roles
+const deleteRole = (id) => {
+    db.query(getRoleByIDSQL, id)
+    .then(rows => {
+        const roleArray = ['None'];
+        rows.forEach(role => {
+            roleArray.push(role.job_title);
+        });
+        inquirer
+            .prompt([
+                {
+                    type: 'list',
+                    name: 'role',
+                    message:'What role would you like to delete?',
+                    choices: [...roleArray]
+                }
+            ])
+            .then(({role})=>{
+                if(role === 'None') {
+                    console.log('Please make sure you are in the right department');
+                    promptOne();
+                } else {
+                    rows.forEach(row => {
+                        if (row.job_title === role ) {
+                            roleId = row.id
+                        }
+                    });
+                    console.log(roleId);
+                    db.query(`DELETE FROM roles WHERE id=?;`, roleId)
+                    .then(() => {
+                        console.log('\nRole deleted. \nWhat would you like to do next?\n');
+                        promptOne();
+                    })
+                    .catch(err => console.log(err));
+                }
+            })
+    })
+
+}
+// Delete employees
+const deleteEmp = (id) => {
+    db.query(getRoleByIDSQL, id)
+    .then(rows => {
+        const roleArray = ['None'];
+        rows.forEach(role => {
+            roleArray.push(role.job_title);
+        });
+        inquirer
+            .prompt([
+                {
+                    type: 'list',
+                    name: 'role',
+                    message:'What role does the employee currently have?',
+                    choices: [...roleArray]
+                }
+            ])
+            .then(({role})=>{
+                if(role === 'None') {
+                    console.log('Please make sure you are in the right department');
+                    promptOne();
+                } else {
+                    rows.forEach(row => {
+                        if (row.job_title === role ) {
+                            roleId = row.id
+                        }
+                    });
+                    const sql = `SELECT last_name, id FROM employees WHERE role_id=?;`
+                    db.query(sql, roleId)
+                        .then((rows) => {
+                            const lastNamearry = [];
+                            rows.forEach(name => {
+                                lastNamearry.push(name.last_name);
+                            });
+                            inquirer
+                                .prompt([
+                                    {
+                                        type: 'list',
+                                        name: 'LastName',
+                                        message:'What is the last name of the employee you would like to delete?',
+                                        choices:['None', ...lastNamearry]
+                                    }
+                                ])
+                                .then(({LastName}) => {
+                                    if (LastName === 'None') {
+                                        console.log('Please make sure you are in the right department and role')
+                                        return promptOne();
+                                    } else {
+                                        rows.forEach(row => {
+                                            if (row.last_name === LastName) {
+                                                nameId = row.id
+                                            }
+                                        });
+                                        db.query(`DELETE FROM employees WHERE id=?`, nameId)
+                                        .then(()=> {
+                                            console.log(`${LastName} deleted from the database\nWhat would you like to do next?\n`);
+                                            promptOne();
+                                        })
+                                        .catch(err => console.log(err));
+                                    }
+
+                                });
+                            });
+                }
+            }); 
+    });
+
+}
 // Take results from first prompt and output table
 const promptTwo = function (result) {
     const {firstPrompt} = result;
@@ -534,6 +656,12 @@ const promptTwo = function (result) {
         getDepId('UpdateManager');
     } else if (firstPrompt === 'View Total Utilized Budget') {
         getBudget();
+    } else if (firstPrompt === "Delete Department") {
+        getDepId("deleteDep");
+    } else if (firstPrompt === 'Delete Role') {
+        getDepId('deleteRole');
+    } else if (firstPrompt === 'Delete Employee') {
+        getDepId('deleteEmp');
     } else if (firstPrompt === 'Quit') {
         db.close();
     }
