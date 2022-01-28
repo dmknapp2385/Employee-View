@@ -12,7 +12,7 @@ const promptOne = function(){
                 type: 'list',
                 name: 'firstPrompt',
                 message: 'What would you like to do?',
-                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'View Employee by Department','View Employee by Manager','Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager','Quit'],
+                choices: ['View All Departments', 'View All Roles', 'View All Employees', 'View Employee by Department','View Employee by Manager','Add Department', 'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager','View Total Utilized Budget','Quit'],
                 defalut: 'View All Employees'                
             }
         ])
@@ -139,7 +139,7 @@ let getDepId = (purpose) => {
                         return viewByManager(depId);
                     } else if (purpose === 'viewByDept') {
                         return viewByDepartment(depId)
-                    }
+                    } 
                 }
             });
         });
@@ -489,6 +489,7 @@ const viewByManager = (id) => {
     });
 }
 
+// view employees by department
 const viewByDepartment =(id) => {
     db.query(getEmployeesSQL +` WHERE d.id =?;`, id)
     .then(rows => {
@@ -497,6 +498,16 @@ const viewByDepartment =(id) => {
     })
 }
 
+// get tota utilized budget by department
+const getBudget = () => {
+    db.query(`SELECT d.name AS Department, SUM (r.salary) AS "Utlized Budget" FROM departments as d LEFT JOIN roles as r on d.id = r.department_id GROUP BY 1 ORDER BY 2 DESC`)
+    .then(rows => {
+        console.table(rows);
+        console.log(`\nWhat would you like to do next?\n`)
+        promptOne();
+    })
+    .catch(err => console.log(err));
+}
 
 // Take results from first prompt and output table
 const promptTwo = function (result) {
@@ -521,6 +532,8 @@ const promptTwo = function (result) {
         getDepId('UpdateRole');
     } else if (firstPrompt === 'Update Employee Manager') {
         getDepId('UpdateManager');
+    } else if (firstPrompt === 'View Total Utilized Budget') {
+        getBudget();
     } else if (firstPrompt === 'Quit') {
         db.close();
     }
