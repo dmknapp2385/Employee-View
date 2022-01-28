@@ -24,8 +24,6 @@ const promptOne = function(){
 // SQL commands
 
 const getDepartmentsSQL = `SELECT * FROM departments ORDER BY id ASC;`
-const getRoleSQL = `SELECT r.id, r.job_title AS Job, r.salary, d.name AS department FROM roles AS r
-LEFT JOIN departments AS d ON r.department_id = d.id;`
 const getEmployeesSQL = `SELECT CONCAT(e.first_name," ", e.last_name) AS "Full Name", e.manager AS Manager, r.job_title AS Role, r.salary AS Salary, d.name AS Department FROM employees AS e LEFT JOIN roles AS r ON e.role_id = r.id LEFT JOIN departments AS d ON r.department_id = d.id`
 const getRoleByIDSQL = `SELECT job_title, id FROM roles WHERE department_id=?;`
 
@@ -73,7 +71,8 @@ const addDepartment = () => {
 
 //Get Roles
 const getRoles = () => {
-    db.query(getRoleSQL)
+    db.query(`SELECT r.id, r.job_title AS Job, r.salary, d.name AS department FROM roles AS r
+            LEFT JOIN departments AS d ON r.department_id = d.id;`)
         .then((rows) => {
             console.table('\n\nRoles', rows);
             console.log('What else would you like to do?\n')
@@ -297,7 +296,6 @@ const updateEmployee = (id) => {
                     console.log('Please make sure you are in the right deparment or add another role first')
                     return promptOne();
                 } else {
-                    console.log(roleObj);
                     console.log(typeof(role));
                     roleObj.forEach(row => {
                         if (row.job_title === role) {
@@ -461,7 +459,30 @@ const updateEmployeeManager = (id) => {
 // view employees by manager
 
 const viewByManager = (id) => {
+    console.log
+    db.query(getEmployeesSQL + ` WHERE d.id =?;`, id)
+    .then(rows => {
+        let managerArray = [];
+        rows.forEach(row => managerArray.push(row.Manager))
+        inquirer
+        .prompt([
+            {
+                type:'list',
+                name:'manager',
+                message:`Whose employees would you like to view?`,
+                choices: [...managerArray]
+            }
+        ])
+        .then(({manager}) => {
+            db.query(getEmployeesSQL + ` WHERE e.manager =?;`, manager)
+            .then(rows => {
+                console.table('\n\n' + rows);
+                console.log('What would you like to do next?');
+                promptOne();
+            })
 
+        });
+    });
 }
 
 const viewByDepartment =(id) => {
@@ -484,7 +505,7 @@ const promptTwo = function (result) {
         getEmployees();
     } else if ( firstPrompt === 'Add Department') {
         addDepartment();
-    } else if (firstPrompt === 'View Employee By Manager'){
+    } else if (firstPrompt === 'View Employee by Manager'){
         getDepId('viewByManager');
     } else if (firstPrompt === 'View Employee by Department') {
         getDepId('viewByDept');
