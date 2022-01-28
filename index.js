@@ -366,7 +366,6 @@ const updateEmployee = (id) => {
 
 //Update Employee Manager 
 const updateEmployeeManager = (id) => {
-    console.log(id)
     db.query(getRoleByIDSQL, id)
     .then((rows) => {
         let roleObj = [...rows];
@@ -460,26 +459,31 @@ const updateEmployeeManager = (id) => {
 
 const viewByManager = (id) => {
     console.log
-    db.query(getEmployeesSQL + ` WHERE d.id =?;`, id)
+    db.query(`SELECT e.manager AS Managers, COUNT (*) FROM employees as e LEFT JOIN roles AS r ON e.role_id = r.id LEFT JOIN departments AS d ON r.department_id = d.id WHERE d.id =? GROUP BY Managers;`, id)
     .then(rows => {
         let managerArray = [];
-        rows.forEach(row => managerArray.push(row.Manager))
+        rows.forEach(row => managerArray.push(row.Managers))
         inquirer
         .prompt([
             {
                 type:'list',
                 name:'manager',
                 message:`Whose employees would you like to view?`,
-                choices: [...managerArray]
+                choices: [...managerArray, 'Back']
             }
         ])
         .then(({manager}) => {
+            if (manager === 'Back') {
+                console.log('\nMake sure you are in the right department\n');
+                promptOne();
+            }
             db.query(getEmployeesSQL + ` WHERE e.manager =?;`, manager)
             .then(rows => {
-                console.table('\n\n' + rows);
+                console.table(rows);
                 console.log('What would you like to do next?');
                 promptOne();
             })
+            .catch(err => console.log(err));
 
         });
     });
