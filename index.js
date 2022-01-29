@@ -551,7 +551,6 @@ const deleteRole = (id) => {
                             roleId = row.id
                         }
                     });
-                    console.log(roleId);
                     db.query(`DELETE FROM roles WHERE id=?;`, roleId)
                     .then(() => {
                         console.log('\nRole deleted. \nWhat would you like to do next?\n');
