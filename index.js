@@ -1,9 +1,10 @@
 const inquirer = require('inquirer');
 const Ctable = require('console.table');
-// const db = require('./db/connection')
 const Database = require('./db/connection2');
 
 const db = new Database;
+
+
 // Prompt what table is to be viewed
 const promptOne = function(){
     return inquirer
