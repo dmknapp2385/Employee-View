@@ -8,10 +8,8 @@
 A command line application that allows businesses to view departments, job roles, and empolyees in a variet of ways as well as add new departments, job roles, and emplyees all through the command line. Employee role and manager can be updated and departments, roles and employees all deleted with ease.
 
     
-![](/images/sample-selction.png)
+![](/image.png)
   
-
-
 ## Table of Contents
 
 * [Installation](#installation)
